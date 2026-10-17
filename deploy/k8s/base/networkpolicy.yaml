@@ -1,5 +1,7 @@
 # Ingress only on the HTTP port, no egress at all: the pod serves files and
-# never needs to call anything. (Enforced only where the CNI supports it.)
+# never needs to call anything. Egress is listed with no rules (= deny all) rather
+# than `egress: []`, which the API server drops and GitOps tools then report as drift.
+# (Enforced only where the CNI supports it.)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -10,4 +12,3 @@ spec:
   policyTypes: [Ingress, Egress]
   ingress:
     - ports: [{ port: 8080, protocol: TCP }]
-  egress: []
