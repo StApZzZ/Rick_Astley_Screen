@@ -8,6 +8,14 @@ updates:
     # usually caught and pulled within days).
     cooldown:
       default-days: 7
+    ignore:
+      # The types follow the runtime: Node 24 LTS (.node-version).
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
+      # `typescript` is TypeScript 6 on purpose: typescript-eslint needs its API and
+      # has no TypeScript 7 support yet; the compiler itself is @typescript/native (7).
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
     groups:
       toolchain:
         patterns: ['*']
