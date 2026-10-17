@@ -33,7 +33,7 @@ json_str() {
 
 uint() { # <name> <value> <max>
   case "$2" in '' | *[!0-9]*) die "$1 must be a non-negative integer, got '$2'" ;; esac
-  [ "${#2}" -le 6 ] && [ "$2" -le "$3" ] || die "$1 must be <= $3, got '$2'"
+  if [ "${#2}" -gt 6 ] || [ "$2" -gt "$3" ]; then die "$1 must be <= $3, got '$2'"; fi
   printf '%s' "$2"
 }
 

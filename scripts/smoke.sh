@@ -1,6 +1,7 @@
 #!/bin/sh
 # Smoke test of a running Rick Astley Screen: endpoints, security headers, ranges.
 #   scripts/smoke.sh http://localhost:8080/ [media path, default media/never-gonna-give-you-up.mp4]
+#   SMOKE_CURL_OPTS=-k scripts/smoke.sh https://localhost:8443/    (self-signed proxy in front)
 set -eu
 BASE=${1:?usage: smoke.sh <base-url> [media-path]}
 MEDIA=${2:-media/never-gonna-give-you-up.mp4}
@@ -9,6 +10,8 @@ fail=0
 ok() { printf '  ok   %s\n' "$1"; }
 bad() { printf '  FAIL %s\n' "$1"; fail=1; }
 
+# shellcheck disable=SC2086 # SMOKE_CURL_OPTS is a list of curl flags
+curl() { command curl ${SMOKE_CURL_OPTS:-} "$@"; }
 code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
 header() { # <url> <header-name>
   curl -s -D - -o /dev/null "$1" | tr -d '\r' | awk -v h="$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')" \
@@ -22,7 +25,8 @@ check() { # <description> <command...>: ok if the command succeeds
 }
 check "GET / -> 200" [ "$(code "${BASE}")" = 200 ]
 check "/healthz -> ok" [ "$(curl -s "${BASE}healthz")" = ok ]
-check "config.json has defaultMessage" sh -c "curl -s '${BASE}config.json' | grep -q '\"defaultMessage\"'"
+has_config() { curl -s "${BASE}config.json" | grep -q '"defaultMessage"'; }
+check "config.json has defaultMessage" has_config
 check "POST -> 405" [ "$(code -X POST "${BASE}")" = 405 ]
 check "dotfiles -> 404" [ "$(code "${BASE}.env")" = 404 ]
 
