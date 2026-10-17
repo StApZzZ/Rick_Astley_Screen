@@ -6,6 +6,6 @@
 !index.html
 !src/**
 !public/**
-!docker/nginx/**
+!docker/angie/**
 !docker/entrypoint/**
 !scripts/fetch-media.sh

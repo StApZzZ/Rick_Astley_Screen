@@ -4,7 +4,7 @@
 #
 # The first `up` runs the one-shot `media` service, which downloads and transcodes
 # the clip into the `media` volume (the clip is not shipped in the image: copyright).
-# Already have the file? Replace the volume with a bind mount, e.g. ../../media:/usr/share/nginx/html/media:ro
+# Already have the file? Replace the volume with a bind mount, e.g. ../../media:/usr/share/angie/html/media:ro
 name: rick-astley-screen
 
 services:
@@ -33,7 +33,7 @@ services:
       # RICKROLL_MEDIA_URL: https://cdn.example.com/never-gonna-give-you-up.mp4
       # RICKROLL_BASE_PATH: /rick/
     volumes:
-      - media:/usr/share/nginx/html/media:ro
+      - media:/usr/share/angie/html/media:ro
     read_only: true
     tmpfs:
       - /tmp:size=16m,mode=1777

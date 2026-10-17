@@ -61,7 +61,7 @@ docker compose -f deploy/docker/compose.yaml up -d     # http://localhost:8080
 
 ```sh
 docker run -d -p 8080:8080 --read-only --tmpfs /tmp --cap-drop ALL \
-  -v "$PWD/media:/usr/share/nginx/html/media:ro" ghcr.io/stapzzz/rick-astley-screen:1
+  -v "$PWD/media:/usr/share/angie/html/media:ro" ghcr.io/stapzzz/rick-astley-screen:1
 ```
 
 ### Kubernetes
@@ -77,7 +77,7 @@ kubectl apply -k deploy/k8s/overlays/example
 ### Страница существующего сайта
 
 Под путём вроде `https://intranet.example.com/rick/`: прокси на контейнер или просто
-копия статических файлов. Сниппеты для nginx, Caddy, Apache и Traefik лежат в [deploy/proxy](deploy/proxy/README.md).
+копия статических файлов. Сниппеты для Angie (подходят и для nginx) и Traefik лежат в [deploy/proxy](deploy/proxy/README.md).
 Сборка использует только относительные пути, поэтому работает под любым префиксом.
 
 ### Настройки контейнера
@@ -129,12 +129,12 @@ npm run test:e2e       # Playwright (сам соберёт и поднимет v
 ```
 
 Стек: TypeScript 7 (нативный компилятор; TypeScript 6 оставлен только как API для
-typescript-eslint), Vite 8, Vitest 5, Playwright, ESLint 10, nginx 1.30 (unprivileged).
+typescript-eslint), Vite 8, Vitest 5, Playwright, ESLint 10, Angie 1.12 (minimal, без root).
 Фреймворков и рантайм-зависимостей нет: в браузер уходит меньше 10 КБ (gzip).
 
 ## English
 
-A static page (TypeScript, no runtime dependencies) served by unprivileged nginx.
+A static page (TypeScript, no runtime dependencies) served by Angie as an unprivileged user.
 Type a message (default: «Тебя Рик Астнули», "You've been Rick-Astleyed"), press OK:
 the page goes fullscreen and black, keeps the display awake and arms itself once the
 mouse has been still for 1.5 s. The next mouse move, click, wheel, touch or key press

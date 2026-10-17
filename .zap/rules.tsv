@@ -2,5 +2,7 @@
 # ZAP's default level, and the workflow fails on any WARN or FAIL.
 # Ignored: informational findings that describe a static site, not a weakness.
 10049	IGNORE	(Storable and Cacheable Content: hashed assets are meant to be cached)
+10015	IGNORE	(Re-examine Cache-control Directives: public static files with no user data, caching them is intended)
 10109	IGNORE	(Modern Web Application: informational, the page is a JS app)
 90005	IGNORE	(Sec-Fetch-Dest Header is Missing: about the requests ZAP itself sends)
+40025	IGNORE	(Proxy Disclosure: the TLS proxy is the DAST harness itself; both hops refuse all but GET/HEAD and show no versions)

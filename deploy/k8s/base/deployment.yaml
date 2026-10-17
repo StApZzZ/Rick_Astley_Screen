@@ -37,7 +37,7 @@ spec:
           env:
             - { name: RICKROLL_DEFAULT_MESSAGE, value: 'Тебя Рик Астнули' }
             # Override in the overlay: a CDN URL, or keep the same-origin path
-            # and mount the clip at /usr/share/nginx/html/media.
+            # and mount the clip at /usr/share/angie/html/media.
             - { name: RICKROLL_MEDIA_URL, value: media/never-gonna-give-you-up.mp4 }
           readinessProbe:
             httpGet: { path: /healthz, port: http }
@@ -46,7 +46,7 @@ spec:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 30
           lifecycle:
-            # Let the proxy drop the endpoint before nginx stops.
+            # Let the proxy drop the endpoint before Angie stops.
             preStop:
               sleep: { seconds: 5 }
           resources:

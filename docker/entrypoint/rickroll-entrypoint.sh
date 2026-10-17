@@ -1,6 +1,6 @@
 #!/bin/sh
-# Renders the deployment-specific pieces from environment variables into
-# /tmp/rickroll before nginx starts (the nginx image runs /docker-entrypoint.d/*.sh).
+# Container entrypoint: renders the deployment-specific pieces from environment
+# variables into /tmp/rickroll, then execs the command (Angie by default).
 #
 #   RICKROLL_DEFAULT_MESSAGE    text shown when the prankster just presses OK
 #   RICKROLL_MEDIA_URL          video URL: a path relative to the page or an absolute http(s) URL
@@ -22,7 +22,7 @@ OUT=/tmp/rickroll
 mkdir -p "$OUT"
 
 die() {
-  echo "40-rickroll-config: $*" >&2
+  echo "rickroll-entrypoint: $*" >&2
   exit 1
 }
 
@@ -113,4 +113,6 @@ EOF
   *) die "RICKROLL_BASE_PATH must start and end with /, got '$base_path'" ;;
 esac
 
-echo "40-rickroll-config: media ${media_url} (${media_type}); base path ${base_path}; extra origins: ${origins:-none}"
+echo "rickroll-entrypoint: media ${media_url} (${media_type}); base path ${base_path}; extra origins: ${origins:-none}"
+
+exec "$@"

@@ -3,7 +3,7 @@ kind: Ingress
 metadata:
   name: rick-astley-screen
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik # your ingress controller's class
   tls:
     - hosts: [rick.example.com]
       secretName: rick-astley-screen-tls

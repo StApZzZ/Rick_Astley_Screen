@@ -10,7 +10,7 @@ answer within a week.
 
 - the page itself (XSS through the message, the URL fragment or `config.json`,
   CSP bypasses);
-- the container image (`ghcr.io/stapzzz/rick-astley-screen`): its nginx
+- the container image (`ghcr.io/stapzzz/rick-astley-screen`): its Angie
   configuration, the start-up script that renders the config from environment
   variables;
 - the supply chain: the CI workflows, signing and provenance.

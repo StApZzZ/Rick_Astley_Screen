@@ -7,11 +7,11 @@ works under any prefix.
 ## A. Reverse proxy to the container
 
 Run the container (`docker run -d -p 127.0.0.1:8080:8080 ghcr.io/stapzzz/rick-astley-screen`),
-then route the path to it. Snippets: [nginx](nginx.conf), [Caddy](Caddyfile),
-[Apache](apache.conf), [Traefik](traefik.yaml).
+then route the path to it. Snippets: [Angie](angie.conf) (the same lines work in nginx)
+and [Traefik](traefik.yaml).
 
-- **The proxy strips the prefix** (nginx `proxy_pass http://127.0.0.1:8080/;` with
-  the trailing slash, Caddy `handle_path`, Traefik `stripPrefix`): nothing else to do.
+- **The proxy strips the prefix** (Angie/nginx `proxy_pass http://127.0.0.1:8080/;` with
+  the trailing slash, Traefik `stripPrefix`): nothing else to do.
 - **The proxy keeps the prefix:** start the container with `RICKROLL_BASE_PATH=/rick/`.
 
 The container sends its own security headers (CSP, COOP/COEP, nosniff, ...). If the
@@ -26,5 +26,5 @@ unpack it into the site's web root as `rick/`, put the clip at
 `rick/media/never-gonna-give-you-up.mp4`, and edit `rick/config.json` if you want
 another default message or a CDN URL for the video.
 
-Then add the headers the container would have sent; [nginx-static.conf](nginx-static.conf)
-shows them for nginx.
+Then add the headers the container would have sent; [angie-static.conf](angie-static.conf)
+shows them for Angie (and nginx).
