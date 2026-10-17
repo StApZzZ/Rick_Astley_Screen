@@ -1,0 +1,186 @@
+name: security
+
+# SAST and supply-chain checks. Pushes to main run this through release.yml, so a
+# finding blocks the promotion of the image; pull requests and the weekly schedule
+# run it directly (new CVEs appear without new commits).
+on:
+  pull_request:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_call:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  codeql:
+    name: CodeQL (TypeScript, Actions)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, actions]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-extended
+      - uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          category: /language:${{ matrix.language }}
+
+  semgrep:
+    name: Semgrep
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Scan
+        run: |
+          image=$(sed -n 's/^FROM \(.*\) AS semgrep$/\1/p' .github/tool-images.Dockerfile)
+          docker run --rm -v "$PWD:/src" -w /src "$image" semgrep scan --metrics=off --error \
+            --config p/default --config p/typescript --config p/secrets --config p/dockerfile \
+            --config p/nginx --config p/kubernetes --config p/github-actions \
+            --sarif-output=semgrep.sarif --text
+      - uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        if: always() && hashFiles('semgrep.sarif') != ''
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+  secrets:
+    name: Gitleaks (full history)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Scan
+        run: |
+          image=$(sed -n 's/^FROM \(.*\) AS gitleaks$/\1/p' .github/tool-images.Dockerfile)
+          docker run --rm -v "$PWD:/repo" -w /repo "$image" git --redact --verbose --exit-code 1 /repo
+
+  trivy-fs:
+    name: Trivy (dependencies, IaC misconfiguration, secrets)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Scan
+        run: |
+          image=$(sed -n 's/^FROM \(.*\) AS trivy$/\1/p' .github/tool-images.Dockerfile)
+          run() { docker run --rm -v "$PWD:/src" -w /src -v trivy-cache:/root/.cache "$image" "$@"; }
+          run fs --scanners vuln,misconfig,secret --skip-files .github/tool-images.Dockerfile \
+            --format sarif --output trivy-fs.sarif .
+          run fs --scanners vuln,misconfig,secret --skip-files .github/tool-images.Dockerfile \
+            --severity MEDIUM,HIGH,CRITICAL --exit-code 1 .
+      - uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        if: always() && hashFiles('trivy-fs.sarif') != ''
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+  osv:
+    name: OSV-Scanner
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
+
+  osv-pr:
+    name: OSV-Scanner (new vulnerabilities in this PR)
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+          comment-summary-in-pr: on-failure
+
+  workflows:
+    name: Workflow lint (actionlint, zizmor)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: actionlint
+        run: |
+          image=$(sed -n 's/^FROM \(.*\) AS actionlint$/\1/p' .github/tool-images.Dockerfile)
+          docker run --rm -v "$PWD:/repo" -w /repo "$image" -color
+      - uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
+        with:
+          # Print and fail on findings instead of only uploading them.
+          advanced-security: false
+
+  dockerfile:
+    name: Hadolint
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        dockerfile: [Dockerfile, docker/media-fetch/Dockerfile]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: ${{ matrix.dockerfile }}
+          failure-threshold: warning
+
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - run: npm audit --audit-level=moderate

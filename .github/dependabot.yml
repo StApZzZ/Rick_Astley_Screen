@@ -1,0 +1,31 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 10
+    # A release must age a week before it is proposed (malicious versions are
+    # usually caught and pulled within days).
+    cooldown:
+      default-days: 7
+    groups:
+      toolchain:
+        patterns: ['*']
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ['*']
+
+  # Dockerfile base images, the media helper and the CI tool images
+  # (.github/tool-images.Dockerfile is never built: it only pins those images).
+  - package-ecosystem: docker
+    directories: [/, /docker/media-fetch, /.github]
+    schedule: { interval: weekly, day: monday }
+    cooldown:
+      default-days: 7

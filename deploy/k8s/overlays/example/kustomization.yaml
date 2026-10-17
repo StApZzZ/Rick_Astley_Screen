@@ -1,0 +1,19 @@
+# Example overlay: copy it, then change the namespace, host, TLS secret, image tag
+# (or better, a digest) and the media URL. `kubectl apply -k deploy/k8s/overlays/example`
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rick-astley-screen
+resources:
+  - namespace.yaml
+  - ../../base
+  - ingress.yaml
+images:
+  - name: rick-astley-screen
+    newName: ghcr.io/stapzzz/rick-astley-screen
+    newTag: latest # pin a digest in production: digest: sha256:...
+patches:
+  - target: { kind: Deployment, name: rick-astley-screen }
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: https://cdn.example.com/rick-astley-screen/never-gonna-give-you-up.mp4

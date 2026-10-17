@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rick-astley-screen
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [rick.example.com]
+      secretName: rick-astley-screen-tls
+  rules:
+    - host: rick.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: rick-astley-screen, port: { name: http } }

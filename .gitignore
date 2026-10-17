@@ -1,0 +1,23 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+blob-report/
+*.log
+.env
+.env.*
+!.env.example
+
+# The clip is copyrighted: it is never committed. Fetch it with scripts/fetch-media.sh.
+media/*
+!media/README.md
+*.mp4
+*.webm
+*.m4a
+!tests/fixtures/*.mp4
+!tests/fixtures/*.webm
+
+# zap / scanners
+zap-report/
+*.sarif

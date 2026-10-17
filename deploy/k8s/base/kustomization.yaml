@@ -1,0 +1,15 @@
+# Generic Kubernetes deployment of Rick Astley Screen. Use it through an overlay
+# that sets the image, the host and the media URL (see ../overlays/example).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+labels:
+  - pairs:
+      app.kubernetes.io/name: rick-astley-screen
+      app.kubernetes.io/part-of: rick-astley-screen
+    includeSelectors: false
+resources:
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+  - pdb.yaml
+  - networkpolicy.yaml

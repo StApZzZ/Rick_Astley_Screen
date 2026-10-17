@@ -1,0 +1,5 @@
+rules:
+  # Suggests the newer `$/...` form for calling this repository's own reusable
+  # workflows; `./...` is equivalent here and understood by every linter.
+  self-repository:
+    disable: true

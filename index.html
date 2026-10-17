@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      name="description"
+      content="A harmless Rick Astley prank for colleagues who forget to lock their computer."
+    />
+    <title>Rick Astley Screen</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+  </head>
+  <body data-view="setup">
+    <main id="setup" class="setup">
+      <form id="setup-form" class="card" autocomplete="off" novalidate>
+        <h1 id="title">Rick Astley Screen</h1>
+        <p id="lead" class="lead"></p>
+        <label id="message-label" for="message">Сообщение</label>
+        <div class="row">
+          <input
+            id="message"
+            name="message"
+            type="text"
+            maxlength="140"
+            spellcheck="false"
+            autocomplete="off"
+            enterkeyhint="go"
+          />
+          <button id="go" type="submit">OK</button>
+        </div>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+        <details class="how">
+          <summary id="how-title">Как это работает</summary>
+          <ol id="how-steps"></ol>
+        </details>
+      </form>
+      <noscript><p class="card">Нужен JavaScript. / JavaScript is required.</p></noscript>
+    </main>
+
+    <div id="blackout" class="blackout" hidden></div>
+
+    <section id="stage" class="stage" hidden aria-live="assertive">
+      <video id="video" playsinline preload="none" disablepictureinpicture disableremoteplayback></video>
+      <div class="overlay">
+        <p id="caption" class="caption"></p>
+        <p id="hint" class="hint"></p>
+        <p id="sound" class="sound" hidden></p>
+      </div>
+      <button id="stop" class="stop" type="button" aria-label="Стоп">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+        </svg>
+      </button>
+    </section>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

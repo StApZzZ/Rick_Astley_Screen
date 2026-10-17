@@ -1,0 +1,51 @@
+# Rick Astley Screen with Docker Compose: the page and the clip on one origin.
+#
+#   docker compose -f deploy/docker/compose.yaml up -d      # http://localhost:8080
+#
+# The first `up` runs the one-shot `media` service, which downloads and transcodes
+# the clip into the `media` volume (the clip is not shipped in the image: copyright).
+# Already have the file? Replace the volume with a bind mount, e.g. ../../media:/usr/share/nginx/html/media:ro
+name: rick-astley-screen
+
+services:
+  media:
+    build:
+      context: ../..
+      dockerfile: docker/media-fetch/Dockerfile
+    environment:
+      OUT_DIR: /media
+    volumes:
+      - media:/media
+    restart: 'no'
+
+  web:
+    image: ${RICKROLL_IMAGE:-ghcr.io/stapzzz/rick-astley-screen:1}
+    # Or build locally: docker compose build web
+    build:
+      context: ../..
+    depends_on:
+      media:
+        condition: service_completed_successfully
+    ports:
+      - '${RICKROLL_PORT:-8080}:8080'
+    environment:
+      RICKROLL_DEFAULT_MESSAGE: ${RICKROLL_DEFAULT_MESSAGE:-Тебя Рик Астнули}
+      # RICKROLL_MEDIA_URL: https://cdn.example.com/never-gonna-give-you-up.mp4
+      # RICKROLL_BASE_PATH: /rick/
+    volumes:
+      - media:/usr/share/nginx/html/media:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/healthz']
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  media:

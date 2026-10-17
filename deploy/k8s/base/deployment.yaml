@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rick-astley-screen
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels: { app: rick-astley-screen }
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  template:
+    metadata:
+      labels: { app: rick-astley-screen }
+    spec:
+      serviceAccountName: rick-astley-screen
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile: { type: RuntimeDefault }
+      # Stateless: replicas go to different nodes, none is pinned anywhere.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app: rick-astley-screen }
+      containers:
+        - name: site
+          image: ghcr.io/stapzzz/rick-astley-screen:1
+          imagePullPolicy: IfNotPresent
+          ports: [{ name: http, containerPort: 8080 }]
+          env:
+            - { name: RICKROLL_DEFAULT_MESSAGE, value: 'Тебя Рик Астнули' }
+            # Override in the overlay: a CDN URL, or keep the same-origin path
+            # and mount the clip at /usr/share/nginx/html/media.
+            - { name: RICKROLL_MEDIA_URL, value: media/never-gonna-give-you-up.mp4 }
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 30
+          lifecycle:
+            # Let the proxy drop the endpoint before nginx stops.
+            preStop:
+              sleep: { seconds: 5 }
+          resources:
+            requests: { cpu: 10m, memory: 24Mi }
+            limits: { cpu: 200m, memory: 64Mi }
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 16Mi }

@@ -1,0 +1,6 @@
+# ZAP rule overrides (tab separated: id, action, name). Everything not listed keeps
+# ZAP's default level, and the workflow fails on any WARN or FAIL.
+# Ignored: informational findings that describe a static site, not a weakness.
+10049	IGNORE	(Storable and Cacheable Content: hashed assets are meant to be cached)
+10109	IGNORE	(Modern Web Application: informational, the page is a JS app)
+90005	IGNORE	(Sec-Fetch-Dest Header is Missing: about the requests ZAP itself sends)

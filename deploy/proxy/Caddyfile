@@ -1,0 +1,7 @@
+# Inside the site block. handle_path strips /rick before proxying.
+intranet.example.com {
+	redir /rick /rick/ 301
+	handle_path /rick/* {
+		reverse_proxy 127.0.0.1:8080
+	}
+}

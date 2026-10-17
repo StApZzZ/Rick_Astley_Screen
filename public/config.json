@@ -1,0 +1,9 @@
+{
+  "defaultMessage": "Тебя Рик Астнули",
+  "media": [{ "src": "media/never-gonna-give-you-up.mp4", "type": "video/mp4" }],
+  "armDelayMs": 1500,
+  "moveThresholdPx": 12,
+  "loop": true,
+  "lockHint": true,
+  "prefetch": true
+}

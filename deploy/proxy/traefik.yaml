@@ -1,0 +1,26 @@
+# Traefik v3 (Kubernetes CRDs): /rick/ on an existing host, prefix stripped.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: rick-strip
+spec:
+  stripPrefix:
+    prefixes: [/rick]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: rick-astley-screen
+spec:
+  entryPoints: [websecure]
+  routes:
+    - match: Host(`intranet.example.com`) && PathPrefix(`/rick/`)
+      kind: Rule
+      middlewares: [{ name: rick-strip }]
+      services: [{ name: rick-astley-screen, port: 80 }]
+  tls: {}
+# Docker labels equivalent:
+#   traefik.http.routers.rick.rule=Host(`intranet.example.com`) && PathPrefix(`/rick/`)
+#   traefik.http.routers.rick.middlewares=rick-strip
+#   traefik.http.middlewares.rick-strip.stripprefix.prefixes=/rick
+#   traefik.http.services.rick.loadbalancer.server.port=8080
