@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_CONFIG,
   DEFAULT_MESSAGE,
-  isSafeMediaUrl,
+  DEFAULT_EMOTES,
+  isSafeUrl,
   messageFromHash,
   normalizeMessage,
   parseConfig,
@@ -17,11 +18,11 @@ describe('parseConfig', () => {
     }
   });
 
-  it('defaults the message to "Надо блокировать комп, лови Рикролл 🐸"', () => {
-    expect(DEFAULT_MESSAGE).toBe('Надо блокировать комп, лови Рикролл 🐸');
-    expect(parseConfig({}, BASE).defaultMessage).toBe('Надо блокировать комп, лови Рикролл 🐸');
+  it('defaults the message to "Надо блокировать комп, лови Рикролл :pepe:"', () => {
+    expect(DEFAULT_MESSAGE).toBe('Надо блокировать комп, лови Рикролл :pepe:');
+    expect(parseConfig({}, BASE).defaultMessage).toBe('Надо блокировать комп, лови Рикролл :pepe:');
     expect(parseConfig({ defaultMessage: '   ' }, BASE).defaultMessage).toBe(
-      'Надо блокировать комп, лови Рикролл 🐸',
+      'Надо блокировать комп, лови Рикролл :pepe:',
     );
   });
 
@@ -48,6 +49,7 @@ describe('parseConfig', () => {
       loop: false,
       lockHint: false,
       prefetch: false,
+      emotes: DEFAULT_EMOTES,
     });
   });
 
@@ -95,7 +97,7 @@ describe('parseConfig', () => {
   });
 });
 
-describe('isSafeMediaUrl', () => {
+describe('isSafeUrl', () => {
   it.each([
     ['media/a.mp4', true],
     ['./a.mp4', true],
@@ -111,11 +113,11 @@ describe('isSafeMediaUrl', () => {
     ['a\nb.mp4', false],
     ['', false],
   ])('%s -> %s', (src, ok) => {
-    expect(isSafeMediaUrl(src, BASE)).toBe(ok);
+    expect(isSafeUrl(src, BASE)).toBe(ok);
   });
 
   it('rejects absurdly long URLs', () => {
-    expect(isSafeMediaUrl(`a${'b'.repeat(3000)}.mp4`, BASE)).toBe(false);
+    expect(isSafeUrl(`a${'b'.repeat(3000)}.mp4`, BASE)).toBe(false);
   });
 });
 
@@ -148,5 +150,48 @@ describe('messageFromHash', () => {
 
   it('normalizes and caps', () => {
     expect(messageFromHash('#m=%20%20abcdef%0A', 4)).toBe('abcd');
+  });
+});
+
+describe('emotes', () => {
+  it('has pepe built in, as the frog, without an image', () => {
+    expect(parseConfig({}, BASE).emotes.get('pepe')).toEqual({ alt: '🐸' });
+  });
+
+  it('adds an image to a built-in emote and keeps its fallback', () => {
+    const c = parseConfig({ emotes: { pepe: { src: 'emotes/pepe.png' } } }, BASE);
+    expect(c.emotes.get('pepe')).toEqual({ src: 'emotes/pepe.png', alt: '🐸' });
+  });
+
+  it('takes new emotes, with :name: as the default text', () => {
+    const c = parseConfig({ emotes: { kek: { src: 'https://cdn.example/kek.png' } } }, BASE);
+    expect(c.emotes.get('kek')).toEqual({ src: 'https://cdn.example/kek.png', alt: ':kek:' });
+  });
+
+  it('drops bad names and unsafe sources', () => {
+    const c = parseConfig(
+      {
+        emotes: {
+          'Bad-Name': { src: 'a.png' },
+          ['a'.repeat(33)]: { src: 'a.png' },
+          evil: { src: 'javascript:alert(1)' },
+          notobj: 'x.png',
+        },
+      },
+      BASE,
+    );
+    expect([...c.emotes.keys()].sort()).toEqual(['evil', 'pepe']);
+    expect(c.emotes.get('evil')).toEqual({ alt: ':evil:' });
+  });
+
+  it('keeps __proto__ a plain key (no prototype pollution)', () => {
+    const c = parseConfig(JSON.parse('{"emotes": {"__proto__": {"src": "x.png", "alt": "x"}}}'), BASE);
+    expect(c.emotes.get('__proto__')).toEqual({ src: 'x.png', alt: 'x' });
+    expect(({} as Record<string, unknown>).src).toBeUndefined();
+  });
+
+  it('caps the fallback text', () => {
+    const c = parseConfig({ emotes: { pepe: { alt: 'x'.repeat(40) } } }, BASE);
+    expect(c.emotes.get('pepe')?.alt).toBe('x'.repeat(16));
   });
 });

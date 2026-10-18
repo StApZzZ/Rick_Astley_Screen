@@ -1,5 +1,6 @@
 import './styles.css';
 import { loadConfig, messageFromHash, normalizeMessage, type RuntimeConfig } from './config';
+import { emoteImage, hasEmote, renderMessage } from './emotes';
 import { currentPlatform, lockShortcut, pickStrings, type Strings } from './i18n';
 import { MediaController, type MediaStatus } from './media';
 import { enterFullscreen, exitFullscreen, isFullscreen, ScreenWakeLock } from './screen';
@@ -20,6 +21,8 @@ const ui = {
   input: byId('message', HTMLInputElement),
   submit: byId('go', HTMLButtonElement),
   status: byId('status', HTMLParagraphElement),
+  preview: byId('preview', HTMLParagraphElement),
+  emoteBar: byId('emote-bar', HTMLDivElement),
   howTitle: byId('how-title', HTMLElement),
   howSteps: byId('how-steps', HTMLOListElement),
   blackout: byId('blackout', HTMLDivElement),
@@ -82,6 +85,43 @@ async function main(): Promise<void> {
   applyStrings(t, config);
   ui.input.value = messageFromHash(location.hash, config.maxMessageLength) || config.defaultMessage;
 
+  // Emotes: a live preview under the field (`:pepe:` shows as the picture) and a
+  // button per emote that inserts its token at the caret.
+  const updatePreview = (): void => {
+    const text = normalizeMessage(ui.input.value, config.maxMessageLength) || config.defaultMessage;
+    ui.preview.hidden = !hasEmote(text, config.emotes);
+    if (!ui.preview.hidden) renderMessage(ui.preview, text, config.emotes);
+  };
+  const insertToken = (token: string): void => {
+    const el = ui.input;
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? start;
+    const before = el.value.slice(0, start);
+    const head = before + (before === '' || before.endsWith(' ') ? '' : ' ') + token;
+    const next = head + el.value.slice(end);
+    if (next.length > config.maxMessageLength) return;
+    el.value = next;
+    el.focus();
+    el.setSelectionRange(head.length, head.length);
+    updatePreview();
+  };
+  for (const [name, emote] of config.emotes) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'emote-button';
+    button.title = `:${name}:`;
+    button.setAttribute('aria-label', t.insertEmote(name));
+    const { src } = emote;
+    button.append(src ? emoteImage(name, { ...emote, src }, document.baseURI) : emote.alt);
+    button.addEventListener('click', () => {
+      insertToken(`:${name}:`);
+    });
+    ui.emoteBar.append(button);
+  }
+  ui.emoteBar.hidden = config.emotes.size === 0;
+  ui.input.addEventListener('input', updatePreview);
+  updatePreview();
+
   const media = new MediaController(ui.video, config.media, {
     loop: config.loop,
     prefetch: config.prefetch,
@@ -134,7 +174,7 @@ async function main(): Promise<void> {
   ui.form.addEventListener('submit', (event) => {
     event.preventDefault();
     const message = normalizeMessage(ui.input.value, config.maxMessageLength) || config.defaultMessage;
-    ui.caption.textContent = message;
+    renderMessage(ui.caption, message, config.emotes);
     ui.hint.textContent = config.lockHint ? t.lockHint(shortcut) : '';
     ui.sound.textContent = t.soundPrompt;
     // Everything that needs this click's user activation runs synchronously here.
@@ -206,7 +246,10 @@ async function main(): Promise<void> {
 
   show('setup');
   ui.input.focus();
-  ui.input.select();
+  // Everything selected (typing replaces the default), caret at the start so a
+  // long default reads from its beginning instead of scrolled to its end.
+  ui.input.setSelectionRange(0, ui.input.value.length, 'backward');
+  ui.input.scrollLeft = 0;
 }
 
 void main();

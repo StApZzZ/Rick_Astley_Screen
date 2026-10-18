@@ -3,7 +3,7 @@
  *
  * The page reads `config.json` next to `index.html` at start-up. The container
  * image renders that file from environment variables (see
- * docker/entrypoint/40-rickroll-config.sh), so one image serves every
+ * docker/entrypoint/rickroll-entrypoint.sh), so one image serves every
  * deployment. Anything missing or malformed falls back to the defaults below:
  * a broken config must never break the prank.
  */
@@ -13,6 +13,16 @@ export interface MediaSource {
   readonly src: string;
   /** MIME type with optional codecs, e.g. `video/mp4`. */
   readonly type: string;
+}
+
+/**
+ * A custom emote: `:name:` in a message is shown as the image `src` (e.g. a
+ * Twitch/Discord-style emote served by the deployment), or as `alt` text when
+ * there is no image or it fails to load.
+ */
+export interface Emote {
+  readonly src?: string;
+  readonly alt: string;
 }
 
 export interface RuntimeConfig {
@@ -29,9 +39,20 @@ export interface RuntimeConfig {
   readonly lockHint: boolean;
   /** Download the whole video into memory up front so playback never stalls. */
   readonly prefetch: boolean;
+  /** By name. A Map, not an object: a name like `__proto__` must stay a plain key. */
+  readonly emotes: ReadonlyMap<string, Emote>;
 }
 
-export const DEFAULT_MESSAGE = 'Надо блокировать комп, лови Рикролл 🐸';
+export const DEFAULT_MESSAGE = 'Надо блокировать комп, лови Рикролл :pepe:';
+
+/**
+ * Built in, without images: no third-party artwork ships with the project. A
+ * deployment adds the image (`RICKROLL_EMOTES=pepe=emotes/pepe.png`); until then
+ * `:pepe:` reads as the frog.
+ */
+export const DEFAULT_EMOTES: ReadonlyMap<string, Emote> = new Map([['pepe', { alt: '🐸' }]]);
+
+export const EMOTE_NAME_RE = /^[a-z0-9_]{1,32}$/;
 
 export const DEFAULT_CONFIG: RuntimeConfig = {
   defaultMessage: DEFAULT_MESSAGE,
@@ -42,6 +63,7 @@ export const DEFAULT_CONFIG: RuntimeConfig = {
   loop: true,
   lockHint: true,
   prefetch: true,
+  emotes: DEFAULT_EMOTES,
 };
 
 const LIMITS = {
@@ -69,9 +91,9 @@ function bool(value: unknown, fallback: boolean): boolean {
 /**
  * Accept only http(s) URLs or plain relative paths. Anything else
  * (`javascript:`, `data:`, protocol-relative `//host`) is dropped: the value
- * ends up in a media element's `src`.
+ * ends up in a media or image element's `src`.
  */
-export function isSafeMediaUrl(src: string, base: string): boolean {
+export function isSafeUrl(src: string, base: string): boolean {
   if (src.length === 0 || src.length > 2048) return false;
   if (src.startsWith('//') || src.includes('\\')) return false;
   for (const ch of src) if (isControl(ch.codePointAt(0) ?? 0)) return false;
@@ -131,10 +153,28 @@ function parseMedia(value: unknown, base: string): MediaSource[] | undefined {
     if (!isRecord(item)) continue;
     const { src, type } = item;
     if (typeof src !== 'string' || typeof type !== 'string') continue;
-    if (!isSafeMediaUrl(src, base) || !MIME_RE.test(type)) continue;
+    if (!isSafeUrl(src, base) || !MIME_RE.test(type)) continue;
     out.push({ src, type });
   }
   return out.length > 0 ? out : undefined;
+}
+
+const MAX_EMOTES = 32;
+const MAX_EMOTE_ALT = 16;
+
+/** `{"name": {"src": "...", "alt": "..."}}` merged over the built-in emotes. */
+function parseEmotes(value: unknown, base: string): ReadonlyMap<string, Emote> {
+  const out = new Map(DEFAULT_EMOTES);
+  if (!isRecord(value)) return out;
+  for (const [name, item] of Object.entries(value).slice(0, MAX_EMOTES)) {
+    if (!EMOTE_NAME_RE.test(name) || !isRecord(item)) continue;
+    const src = typeof item.src === 'string' && isSafeUrl(item.src, base) ? item.src : undefined;
+    const alt =
+      (typeof item.alt === 'string' ? normalizeMessage(item.alt, MAX_EMOTE_ALT) : '') ||
+      (out.get(name)?.alt ?? `:${name}:`);
+    out.set(name, src === undefined ? { alt } : { src, alt });
+  }
+  return out;
 }
 
 /** Merge an untrusted JSON value over the defaults, field by field. */
@@ -160,6 +200,7 @@ export function parseConfig(input: unknown, base: string): RuntimeConfig {
     loop: bool(input.loop, DEFAULT_CONFIG.loop),
     lockHint: bool(input.lockHint, DEFAULT_CONFIG.lockHint),
     prefetch: bool(input.prefetch, DEFAULT_CONFIG.prefetch),
+    emotes: parseEmotes(input.emotes, base),
   };
 }
 

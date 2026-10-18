@@ -13,6 +13,9 @@
 #   RICKROLL_LOCK_HINT          show the "lock your computer" hint     (true)
 #   RICKROLL_PREFETCH           download the whole clip up front       (true)
 #   RICKROLL_BASE_PATH          serve under this prefix when the proxy does not strip it (/)
+#   RICKROLL_EMOTES             images for :name: in messages, space-separated name=url pairs,
+#                               e.g. "pepe=emotes/pepe.png" (mount the files at .../html/emotes);
+#                               absolute URLs add their origin to the CSP img-src
 #
 # A malformed value stops the container: better a failed rollout than a page
 # whose CSP silently blocks the video.
@@ -45,7 +48,7 @@ origin_ok() {
   printf '%s' "$1" | grep -Eq '^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?$'
 }
 
-message=${RICKROLL_DEFAULT_MESSAGE:-Надо блокировать комп, лови Рикролл 🐸}
+message=${RICKROLL_DEFAULT_MESSAGE:-Надо блокировать комп, лови Рикролл :pepe:}
 media_url=${RICKROLL_MEDIA_URL:-media/never-gonna-give-you-up.mp4}
 media_type=${RICKROLL_MEDIA_TYPE:-video/mp4}
 arm_delay=$(uint RICKROLL_ARM_DELAY_MS "${RICKROLL_ARM_DELAY_MS:-1500}" 60000)
@@ -80,6 +83,29 @@ for o in ${RICKROLL_MEDIA_ORIGINS:-}; do
 done
 origins=$(printf '%s' "$origins" | sed -e 's/^ *//')
 
+emotes_json=""
+img_origins=""
+for pair in ${RICKROLL_EMOTES:-}; do
+  name=${pair%%=*}
+  url=${pair#*=}
+  printf '%s' "$name" | grep -Eq '^[a-z0-9_]{1,32}$' \
+    || die "RICKROLL_EMOTES: bad name '$name' (a-z, 0-9, _; up to 32)"
+  if [ "$url" = "$pair" ] || [ -z "$url" ]; then die "RICKROLL_EMOTES: '$pair' is not name=url"; fi
+  printf '%s' "$url" | grep -Eq "^[A-Za-z0-9._~:/?#@!\$&()*+,;=%-]+\$" \
+    || die "RICKROLL_EMOTES: the URL of '$name' has characters outside the URL set"
+  case "$url" in
+    //*) die "RICKROLL_EMOTES: '$name' must not be protocol-relative" ;;
+    http://* | https://*)
+      o=$(printf '%s' "$url" | sed -E 's#^(https?://[^/?#]+).*#\1#')
+      origin_ok "$o" || die "RICKROLL_EMOTES: cannot derive an origin from '$url'"
+      case " $img_origins " in *" $o "*) ;; *) img_origins="$img_origins $o" ;; esac
+      ;;
+    *:*) die "RICKROLL_EMOTES: '$name': only http(s) URLs or relative paths" ;;
+  esac
+  emotes_json="$emotes_json${emotes_json:+, }\"$name\": { \"src\": \"$url\" }"
+done
+img_origins=$(printf '%s' "$img_origins" | sed -e 's/^ *//')
+
 cat > "$OUT/config.json" <<EOF
 {
   "defaultMessage": "$(json_str "$message")",
@@ -88,13 +114,15 @@ cat > "$OUT/config.json" <<EOF
   "moveThresholdPx": $threshold,
   "loop": $loop,
   "lockHint": $lock_hint,
-  "prefetch": $prefetch
+  "prefetch": $prefetch,
+  "emotes": { $emotes_json }
 }
 EOF
 
 media_src="'self' blob:${origins:+ $origins}"
 connect_src="'self'${origins:+ $origins}"
-csp="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src $media_src; connect-src $connect_src; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types 'none'"
+img_src="'self'${img_origins:+ $img_origins}"
+csp="default-src 'none'; script-src 'self'; style-src 'self'; img-src $img_src; media-src $media_src; connect-src $connect_src; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types 'none'"
 printf 'add_header Content-Security-Policy "%s" always;\n' "$csp" > "$OUT/csp.conf"
 
 case "$base_path" in
@@ -113,6 +141,6 @@ EOF
   *) die "RICKROLL_BASE_PATH must start and end with /, got '$base_path'" ;;
 esac
 
-echo "rickroll-entrypoint: media ${media_url} (${media_type}); base path ${base_path}; extra origins: ${origins:-none}"
+echo "rickroll-entrypoint: media ${media_url} (${media_type}); base path ${base_path}; extra origins: ${origins:-none}; emotes: ${RICKROLL_EMOTES:-none}"
 
 exec "$@"

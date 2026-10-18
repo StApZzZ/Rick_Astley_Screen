@@ -46,7 +46,7 @@ body {
 }
 
 .card {
-  width: min(100%, 520px);
+  width: min(100%, 600px);
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -147,6 +147,51 @@ button {
   line-height: 1.5;
 }
 
+.emote {
+  height: 1.2em;
+  width: auto;
+  vertical-align: -0.25em;
+  margin: 0 0.05em;
+}
+
+.preview {
+  margin: 12px 0 0;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.emote-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.emote-button {
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #0f0f15;
+  color: var(--text);
+  font-size: 1.4rem;
+  font-weight: 400;
+}
+
+.emote-button:hover {
+  border-color: var(--accent);
+}
+
+.emote-button .emote {
+  height: 28px;
+  margin: 0;
+  vertical-align: middle;
+}
+
 /* --- the black screen ---------------------------------------------------------- */
 .blackout {
   position: fixed;
@@ -205,6 +250,11 @@ body[data-view='stage'] {
   paint-order: stroke fill;
   text-shadow: 0 0.06em 0.25em rgb(0 0 0 / 70%);
   animation: pop 600ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.caption .emote {
+  height: 1.1em;
+  filter: drop-shadow(0 0.04em 0.2em rgb(0 0 0 / 70%));
 }
 
 .hint,

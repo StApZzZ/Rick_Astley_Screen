@@ -15,6 +15,7 @@ export interface Strings {
   readonly stop: string;
   readonly lockHint: (shortcut: string) => string;
   readonly afterStop: (shortcut: string) => string;
+  readonly insertEmote: (name: string) => string;
 }
 
 const ru: Strings = {
@@ -39,6 +40,7 @@ const ru: Strings = {
   stop: 'Стоп',
   lockHint: (k) => `Уходя, блокируй компьютер: ${k}`,
   afterStop: (k) => `Готово. В следующий раз блокируй компьютер: ${k}`,
+  insertEmote: (n) => `Вставить :${n}:`,
 };
 
 const en: Strings = {
@@ -63,6 +65,7 @@ const en: Strings = {
   stop: 'Stop',
   lockHint: (k) => `Lock your computer when you leave: ${k}`,
   afterStop: (k) => `Done. Next time, lock your computer: ${k}`,
+  insertEmote: (n) => `Insert :${n}:`,
 };
 
 export function pickStrings(languages: readonly string[]): Strings {

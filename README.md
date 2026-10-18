@@ -13,9 +13,14 @@ with your message. English summary [below](#english)._
 
 ## Как это работает
 
-1. Сообщение по умолчанию — «Надо блокировать комп, лови Рикролл 🐸». Свой текст можно ввести в поле или
+1. Сообщение по умолчанию — «Надо блокировать комп, лови Рикролл :pepe:». Свой текст можно ввести в поле или
    передать ссылкой: `https://…/#m=Обед%20за%20твой%20счёт`. Фрагмент `#…` не уходит
    на сервер и не попадает в логи.
+
+   `:имя:` в тексте — смайл, как в Discord или Twitch. Его картинку задаёт развёртывание
+   (`RICKROLL_EMOTES`), а под полем видно, как сообщение будет выглядеть. Своих картинок
+   проект не несёт: без них `:pepe:` показывается как 🐸.
+
 2. **OK** (или Enter) разворачивает страницу на весь экран, делает его чёрным, прячет
    курсор и не даёт монитору уснуть (Screen Wake Lock).
 3. Ловушка взводится, когда мышь и клавиатура пролежат в покое полторы секунды.
@@ -82,18 +87,19 @@ kubectl apply -k deploy/k8s/overlays/example
 
 ### Настройки контейнера
 
-| Переменная                   | По умолчанию                             |                                                                              |
-| ---------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------- |
-| `RICKROLL_DEFAULT_MESSAGE`   | `Надо блокировать комп, лови Рикролл 🐸` | сообщение, если просто нажать OK                                             |
-| `RICKROLL_MEDIA_URL`         | `media/never-gonna-give-you-up.mp4`      | путь относительно страницы или `https://` URL (его origin сам попадёт в CSP) |
-| `RICKROLL_MEDIA_TYPE`        | `video/mp4`                              | MIME-тип клипа                                                               |
-| `RICKROLL_MEDIA_ORIGINS`     | —                                        | дополнительные origin'ы для CSP `media-src` / `connect-src`                  |
-| `RICKROLL_ARM_DELAY_MS`      | `1500`                                   | сколько ждать покоя перед взводом                                            |
-| `RICKROLL_MOVE_THRESHOLD_PX` | `12`                                     | на сколько надо сдвинуть мышь                                                |
-| `RICKROLL_LOOP`              | `true`                                   | крутить клип по кругу                                                        |
-| `RICKROLL_LOCK_HINT`         | `true`                                   | подсказка «блокируй компьютер»                                               |
-| `RICKROLL_PREFETCH`          | `true`                                   | качать клип в память заранее                                                 |
-| `RICKROLL_BASE_PATH`         | `/`                                      | префикс, если прокси его не срезает (`/rick/`)                               |
+| Переменная                   | По умолчанию                                 |                                                                                                                       |
+| ---------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `RICKROLL_DEFAULT_MESSAGE`   | `Надо блокировать комп, лови Рикролл :pepe:` | сообщение, если просто нажать OK                                                                                      |
+| `RICKROLL_MEDIA_URL`         | `media/never-gonna-give-you-up.mp4`          | путь относительно страницы или `https://` URL (его origin сам попадёт в CSP)                                          |
+| `RICKROLL_MEDIA_TYPE`        | `video/mp4`                                  | MIME-тип клипа                                                                                                        |
+| `RICKROLL_MEDIA_ORIGINS`     | —                                            | дополнительные origin'ы для CSP `media-src` / `connect-src`                                                           |
+| `RICKROLL_ARM_DELAY_MS`      | `1500`                                       | сколько ждать покоя перед взводом                                                                                     |
+| `RICKROLL_MOVE_THRESHOLD_PX` | `12`                                         | на сколько надо сдвинуть мышь                                                                                         |
+| `RICKROLL_LOOP`              | `true`                                       | крутить клип по кругу                                                                                                 |
+| `RICKROLL_LOCK_HINT`         | `true`                                       | подсказка «блокируй компьютер»                                                                                        |
+| `RICKROLL_PREFETCH`          | `true`                                       | качать клип в память заранее                                                                                          |
+| `RICKROLL_BASE_PATH`         | `/`                                          | префикс, если прокси его не срезает (`/rick/`)                                                                        |
+| `RICKROLL_EMOTES`            | —                                            | картинки смайлов: `pepe=emotes/pepe.png kek=https://cdn…/kek.png`; файлы смонтируйте в `/usr/share/angie/html/emotes` |
 
 Неверное значение останавливает контейнер с понятной ошибкой: лучше упавший rollout,
 чем страница, у которой CSP молча блокирует видео.
@@ -135,7 +141,7 @@ typescript-eslint), Vite 8, Vitest 5, Playwright, ESLint 10, Angie 1.12 (minimal
 ## English
 
 A static page (TypeScript, no runtime dependencies) served by Angie as an unprivileged user.
-Type a message (default: «Надо блокировать комп, лови Рикролл 🐸», "you should have locked the PC, enjoy the Rickroll"), press OK:
+Type a message (default: «Надо блокировать комп, лови Рикролл :pepe:», "you should have locked the PC, enjoy the Rickroll"; `:name:` is an emote whose image the deployment supplies via `RICKROLL_EMOTES`, falling back to text such as 🐸), press OK:
 the page goes fullscreen and black, keeps the display awake and arms itself once the
 mouse has been still for 1.5 s. The next mouse move, click, wheel, touch or key press
 plays the video with the message on top and a "lock your computer" hint.

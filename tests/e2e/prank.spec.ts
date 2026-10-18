@@ -8,12 +8,13 @@ const fixture = (name: string): Buffer =>
 const ARM_DELAY_MS = 300;
 
 /**
- * Serve a test config and the synthetic fixture clips (VP9/Opus first: the
- * Playwright browsers ship without H.264) instead of whatever the server has.
+ * Serve a test config, the synthetic fixture clips (VP9/Opus first: the
+ * Playwright browsers ship without H.264) and a plain green square as the
+ * `pepe` emote image, instead of whatever the server has.
  */
 async function stub(page: Page, overrides: Record<string, unknown> = {}): Promise<void> {
   const config = {
-    defaultMessage: 'Надо блокировать комп, лови Рикролл 🐸',
+    defaultMessage: 'Надо блокировать комп, лови Рикролл :pepe:',
     media: [
       { src: 'media/clip.webm', type: 'video/webm; codecs="vp9, opus"' },
       { src: 'media/clip.mp4', type: 'video/mp4' },
@@ -23,6 +24,7 @@ async function stub(page: Page, overrides: Record<string, unknown> = {}): Promis
     loop: true,
     lockHint: true,
     prefetch: true,
+    emotes: { pepe: { src: 'emotes/pepe.png' } },
     ...overrides,
   };
   await page.route('**/config.json', (route) =>
@@ -41,7 +43,17 @@ async function stub(page: Page, overrides: Record<string, unknown> = {}): Promis
       }),
     );
   }
+  await page.route('**/emotes/pepe.png', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      headers: { 'cross-origin-resource-policy': 'same-origin' },
+      body: fixture('emote.png'),
+    }),
+  );
 }
+
+const DEFAULT_TEXT = 'Надо блокировать комп, лови Рикролл';
 
 /** Record CSP violations and page errors from the very first script. */
 async function watchErrors(page: Page): Promise<string[]> {
@@ -79,15 +91,24 @@ async function expectPlaying(page: Page, message: string): Promise<void> {
     .toBe(true);
 }
 
-test('defaults to "Надо блокировать комп, лови Рикролл 🐸" and plays on mouse movement', async ({ page }) => {
+test('defaults to "Надо блокировать комп, лови Рикролл :pepe:" and plays on mouse movement', async ({
+  page,
+}) => {
   const errors = await watchErrors(page);
   await stub(page);
   await page.goto('./');
-  await expect(page.locator('#message')).toHaveValue('Надо блокировать комп, лови Рикролл 🐸');
+  await expect(page.locator('#message')).toHaveValue('Надо блокировать комп, лови Рикролл :pepe:');
+  // The preview under the field shows the emote as its picture.
+  await expect(page.locator('#preview img.emote')).toHaveAttribute('src', /\/emotes\/pepe\.png$/);
   await page.mouse.move(10, 10);
   await arm(page);
   await page.mouse.move(400, 300, { steps: 8 });
-  await expectPlaying(page, 'Надо блокировать комп, лови Рикролл 🐸');
+  await expectPlaying(page, DEFAULT_TEXT);
+  const emote = page.locator('#caption img.emote');
+  await expect(emote).toHaveAttribute('src', /\/emotes\/pepe\.png$/);
+  await expect
+    .poll(() => emote.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0))
+    .toBe(true);
   await expect(page.locator('#hint')).toContainText('блокируй компьютер');
   await expect(page).toHaveTitle('Never Gonna Give You Up');
   expect(errors).toEqual([]);
@@ -181,6 +202,39 @@ test('English UI for English browsers', async ({ browser }) => {
   await page.goto('./');
   await expect(page.locator('#message-label')).toHaveText('Message');
   // The default message stays the configured one.
-  await expect(page.locator('#message')).toHaveValue('Надо блокировать комп, лови Рикролл 🐸');
+  await expect(page.locator('#message')).toHaveValue('Надо блокировать комп, лови Рикролл :pepe:');
   await context.close();
+});
+
+test('without an image the emote reads as the frog', async ({ page }) => {
+  const errors = await watchErrors(page);
+  await stub(page, { emotes: {} });
+  await page.goto('./');
+  await expect(page.locator('#preview')).toHaveText(`${DEFAULT_TEXT} 🐸`);
+  await arm(page);
+  await page.keyboard.press('KeyX');
+  await expectPlaying(page, `${DEFAULT_TEXT} 🐸`);
+  await expect(page.locator('#caption img')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('an emote button inserts its token at the caret', async ({ page }) => {
+  await stub(page);
+  await page.goto('./');
+  await page.locator('#message').fill('Привет');
+  await expect(page.locator('#preview')).toBeHidden();
+  await page.locator('.emote-button[title=":pepe:"]').click();
+  await expect(page.locator('#message')).toHaveValue('Привет :pepe:');
+  await expect(page.locator('#preview img.emote')).toHaveCount(1);
+});
+
+test('an unknown token stays text and markup in a token never renders', async ({ page }) => {
+  await stub(page);
+  await page.goto('./');
+  await page.locator('#message').fill(':nope: :<img src=x onerror=alert(1)>: :pepe:');
+  await arm(page);
+  await page.keyboard.press('KeyA');
+  await expect(page.locator('#caption')).toContainText(':nope: :<img src=x onerror=alert(1)>:');
+  await expect(page.locator('#caption img')).toHaveCount(1);
+  await expect(page.locator('#caption img.emote')).toHaveAttribute('src', /\/emotes\/pepe\.png$/);
 });
