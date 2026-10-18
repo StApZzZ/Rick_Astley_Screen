@@ -45,7 +45,7 @@ origin_ok() {
   printf '%s' "$1" | grep -Eq '^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?$'
 }
 
-message=${RICKROLL_DEFAULT_MESSAGE:-Тебя Рик Астнули}
+message=${RICKROLL_DEFAULT_MESSAGE:-Надо блокировать комп, лови Рикролл 🐸}
 media_url=${RICKROLL_MEDIA_URL:-media/never-gonna-give-you-up.mp4}
 media_type=${RICKROLL_MEDIA_TYPE:-video/mp4}
 arm_delay=$(uint RICKROLL_ARM_DELAY_MS "${RICKROLL_ARM_DELAY_MS:-1500}" 60000)

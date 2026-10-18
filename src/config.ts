@@ -31,7 +31,7 @@ export interface RuntimeConfig {
   readonly prefetch: boolean;
 }
 
-export const DEFAULT_MESSAGE = 'Тебя Рик Астнули';
+export const DEFAULT_MESSAGE = 'Надо блокировать комп, лови Рикролл 🐸';
 
 export const DEFAULT_CONFIG: RuntimeConfig = {
   defaultMessage: DEFAULT_MESSAGE,

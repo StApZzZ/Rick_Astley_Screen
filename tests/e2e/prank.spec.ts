@@ -13,7 +13,7 @@ const ARM_DELAY_MS = 300;
  */
 async function stub(page: Page, overrides: Record<string, unknown> = {}): Promise<void> {
   const config = {
-    defaultMessage: 'Тебя Рик Астнули',
+    defaultMessage: 'Надо блокировать комп, лови Рикролл 🐸',
     media: [
       { src: 'media/clip.webm', type: 'video/webm; codecs="vp9, opus"' },
       { src: 'media/clip.mp4', type: 'video/mp4' },
@@ -79,15 +79,15 @@ async function expectPlaying(page: Page, message: string): Promise<void> {
     .toBe(true);
 }
 
-test('defaults to "Тебя Рик Астнули" and plays on mouse movement', async ({ page }) => {
+test('defaults to "Надо блокировать комп, лови Рикролл 🐸" and plays on mouse movement', async ({ page }) => {
   const errors = await watchErrors(page);
   await stub(page);
   await page.goto('./');
-  await expect(page.locator('#message')).toHaveValue('Тебя Рик Астнули');
+  await expect(page.locator('#message')).toHaveValue('Надо блокировать комп, лови Рикролл 🐸');
   await page.mouse.move(10, 10);
   await arm(page);
   await page.mouse.move(400, 300, { steps: 8 });
-  await expectPlaying(page, 'Тебя Рик Астнули');
+  await expectPlaying(page, 'Надо блокировать комп, лови Рикролл 🐸');
   await expect(page.locator('#hint')).toContainText('блокируй компьютер');
   await expect(page).toHaveTitle('Never Gonna Give You Up');
   expect(errors).toEqual([]);
@@ -181,6 +181,6 @@ test('English UI for English browsers', async ({ browser }) => {
   await page.goto('./');
   await expect(page.locator('#message-label')).toHaveText('Message');
   // The default message stays the configured one.
-  await expect(page.locator('#message')).toHaveValue('Тебя Рик Астнули');
+  await expect(page.locator('#message')).toHaveValue('Надо блокировать комп, лови Рикролл 🐸');
   await context.close();
 });

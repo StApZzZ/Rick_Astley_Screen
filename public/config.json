@@ -1,5 +1,5 @@
 {
-  "defaultMessage": "Тебя Рик Астнули",
+  "defaultMessage": "Надо блокировать комп, лови Рикролл 🐸",
   "media": [{ "src": "media/never-gonna-give-you-up.mp4", "type": "video/mp4" }],
   "armDelayMs": 1500,
   "moveThresholdPx": 12,

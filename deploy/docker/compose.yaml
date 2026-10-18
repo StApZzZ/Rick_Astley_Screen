@@ -29,7 +29,7 @@ services:
     ports:
       - '${RICKROLL_PORT:-8080}:8080'
     environment:
-      RICKROLL_DEFAULT_MESSAGE: ${RICKROLL_DEFAULT_MESSAGE:-Тебя Рик Астнули}
+      RICKROLL_DEFAULT_MESSAGE: ${RICKROLL_DEFAULT_MESSAGE:-Надо блокировать комп, лови Рикролл 🐸}
       # RICKROLL_MEDIA_URL: https://cdn.example.com/never-gonna-give-you-up.mp4
       # RICKROLL_BASE_PATH: /rick/
     volumes:

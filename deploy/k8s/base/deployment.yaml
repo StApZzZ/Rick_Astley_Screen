@@ -35,7 +35,7 @@ spec:
           imagePullPolicy: IfNotPresent
           ports: [{ name: http, containerPort: 8080 }]
           env:
-            - { name: RICKROLL_DEFAULT_MESSAGE, value: 'Тебя Рик Астнули' }
+            - { name: RICKROLL_DEFAULT_MESSAGE, value: 'Надо блокировать комп, лови Рикролл 🐸' }
             # Override in the overlay: a CDN URL, or keep the same-origin path
             # and mount the clip at /usr/share/angie/html/media.
             - { name: RICKROLL_MEDIA_URL, value: media/never-gonna-give-you-up.mp4 }

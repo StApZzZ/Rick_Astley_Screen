@@ -17,10 +17,12 @@ describe('parseConfig', () => {
     }
   });
 
-  it('defaults the message to "Тебя Рик Астнули"', () => {
-    expect(DEFAULT_MESSAGE).toBe('Тебя Рик Астнули');
-    expect(parseConfig({}, BASE).defaultMessage).toBe('Тебя Рик Астнули');
-    expect(parseConfig({ defaultMessage: '   ' }, BASE).defaultMessage).toBe('Тебя Рик Астнули');
+  it('defaults the message to "Надо блокировать комп, лови Рикролл 🐸"', () => {
+    expect(DEFAULT_MESSAGE).toBe('Надо блокировать комп, лови Рикролл 🐸');
+    expect(parseConfig({}, BASE).defaultMessage).toBe('Надо блокировать комп, лови Рикролл 🐸');
+    expect(parseConfig({ defaultMessage: '   ' }, BASE).defaultMessage).toBe(
+      'Надо блокировать комп, лови Рикролл 🐸',
+    );
   });
 
   it('takes valid fields', () => {
