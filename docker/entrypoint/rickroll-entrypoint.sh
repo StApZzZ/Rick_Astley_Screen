@@ -20,6 +20,8 @@
 # A malformed value stops the container: better a failed rollout than a page
 # whose CSP silently blocks the video.
 set -eu
+# The space-separated lists below are split unquoted: no pathname expansion.
+set -f
 
 OUT=/tmp/rickroll
 mkdir -p "$OUT"
@@ -57,6 +59,14 @@ loop=$(boolean RICKROLL_LOOP "${RICKROLL_LOOP:-true}")
 lock_hint=$(boolean RICKROLL_LOCK_HINT "${RICKROLL_LOCK_HINT:-true}")
 prefetch=$(boolean RICKROLL_PREFETCH "${RICKROLL_PREFETCH:-true}")
 base_path=${RICKROLL_BASE_PATH:-/}
+
+# grep and sed below check line by line: a second line would slip past them
+# into config.json and the Angie config.
+NL='
+'
+for v in "RICKROLL_MEDIA_URL=$media_url" "RICKROLL_MEDIA_TYPE=$media_type" "RICKROLL_BASE_PATH=$base_path"; do
+  case "$v" in *"$NL"*) die "${v%%=*} must be a single line" ;; esac
+done
 
 # The URL goes into JSON and its origin into a header: allow URL characters only.
 printf '%s' "$media_url" | grep -Eq "^[A-Za-z0-9._~:/?#@!\$&()*+,;=%-]+\$" \
