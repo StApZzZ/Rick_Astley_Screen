@@ -1,5 +1,6 @@
 import './styles.css';
 import { loadConfig, messageFromHash, normalizeMessage, type RuntimeConfig } from './config';
+import { hasOtherScreens, ScreenCovers, screensPermission } from './covers';
 import { emoteImage, hasEmote, renderMessage } from './emotes';
 import { currentPlatform, lockShortcut, pickStrings, type Strings } from './i18n';
 import { MediaController, type MediaStatus } from './media';
@@ -23,6 +24,9 @@ const ui = {
   status: byId('status', HTMLParagraphElement),
   preview: byId('preview', HTMLParagraphElement),
   emoteBar: byId('emote-bar', HTMLDivElement),
+  screensRow: byId('screens-row', HTMLLabelElement),
+  screensBox: byId('all-screens', HTMLInputElement),
+  screensLabel: byId('all-screens-label', HTMLSpanElement),
   howTitle: byId('how-title', HTMLElement),
   howSteps: byId('how-steps', HTMLOListElement),
   blackout: byId('blackout', HTMLDivElement),
@@ -49,6 +53,7 @@ function applyStrings(t: Strings, config: RuntimeConfig): void {
   ui.lead.textContent = t.lead;
   ui.label.textContent = t.messageLabel;
   ui.submit.textContent = t.submit;
+  ui.screensLabel.textContent = t.allScreens;
   ui.howTitle.textContent = t.howTitle;
   ui.howSteps.replaceChildren(
     ...t.howSteps.map((step) => {
@@ -133,11 +138,30 @@ async function main(): Promise<void> {
   media.init();
 
   const wakeLock = new ScreenWakeLock();
+
+  // Other monitors: offered only where the desktop spans several screens and
+  // the browser can place windows on them. Already granted → on by default.
+  const covers = new ScreenCovers();
+  if (hasOtherScreens()) {
+    ui.screensRow.hidden = false;
+    if ((await screensPermission()) === 'granted') ui.screensBox.checked = await covers.load();
+    ui.screensBox.addEventListener('change', () => {
+      if (!ui.screensBox.checked || covers.ready) return;
+      void covers.load().then((ok) => {
+        ui.screensBox.checked = ok;
+        if (!ok) {
+          ui.status.textContent = t.screensDenied;
+          ui.status.dataset.kind = 'note';
+        }
+      });
+    });
+  }
   const pageTitle = document.title;
   let soundPending = false;
 
   const backToSetup = (note: string): void => {
     trap.reset();
+    covers.close();
     media.stop();
     soundPending = false;
     document.title = pageTitle;
@@ -161,6 +185,8 @@ async function main(): Promise<void> {
     },
     onTrigger: () => {
       delete document.body.dataset.armed;
+      // The clip plays on the page's own screen; the others are uncovered.
+      covers.close();
       document.title = 'Never Gonna Give You Up';
       show('stage');
       ui.sound.hidden = true;
@@ -180,6 +206,7 @@ async function main(): Promise<void> {
     // Everything that needs this click's user activation runs synchronously here.
     media.unlock();
     void enterFullscreen();
+    if (ui.screensBox.checked) covers.open(document.title, wireCover);
     void wakeLock.acquire();
     ui.input.blur();
     show('blackout');
@@ -192,37 +219,74 @@ async function main(): Promise<void> {
   });
 
   // --- input wiring: everything feeds the trap; the trap decides ------------------
-  let last: { x: number; y: number } | undefined;
-  window.addEventListener(
-    'pointermove',
-    (e) => {
-      const prev = last;
-      last = { x: e.clientX, y: e.clientY };
-      const dx = prev ? e.clientX - prev.x : e.movementX;
-      const dy = prev ? e.clientY - prev.y : e.movementY;
-      trap.pointerMove(dx, dy);
-    },
-    { passive: true },
-  );
-  window.addEventListener('pointerdown', () => {
-    trap.pointerDown();
-  });
-  window.addEventListener(
-    'wheel',
-    () => {
-      trap.wheel();
-    },
-    { passive: true },
-  );
-  window.addEventListener(
-    'touchstart',
-    () => {
-      trap.touch();
-    },
-    { passive: true },
-  );
-  window.addEventListener('keydown', () => {
-    trap.key();
+  // The same listeners go on the page and on every cover window.
+  const wireInput = (win: Window, signal: AbortSignal): void => {
+    let last: { x: number; y: number } | undefined;
+    win.addEventListener(
+      'pointermove',
+      (e) => {
+        const prev = last;
+        last = { x: e.clientX, y: e.clientY };
+        const dx = prev ? e.clientX - prev.x : e.movementX;
+        const dy = prev ? e.clientY - prev.y : e.movementY;
+        trap.pointerMove(dx, dy);
+      },
+      { passive: true, signal },
+    );
+    win.addEventListener(
+      'pointerdown',
+      () => {
+        trap.pointerDown();
+      },
+      { signal },
+    );
+    win.addEventListener(
+      'wheel',
+      () => {
+        trap.wheel();
+      },
+      { passive: true, signal },
+    );
+    win.addEventListener(
+      'touchstart',
+      () => {
+        trap.touch();
+      },
+      { passive: true, signal },
+    );
+    win.addEventListener(
+      'keydown',
+      (e) => {
+        // A cover takes the keyboard focus when it opens, so Esc there must
+        // still let the prankster back out while the trap is arming.
+        if (win !== window && e.key === 'Escape' && trap.phase === 'arming') backToSetup('');
+        else trap.key();
+      },
+      { signal },
+    );
+    win.document.addEventListener(
+      'contextmenu',
+      (e) => {
+        if (document.body.dataset.view !== 'setup') e.preventDefault();
+      },
+      { signal },
+    );
+  };
+  // A cover closed by hand counts like leaving fullscreen on the page.
+  const wireCover = (cover: Window, signal: AbortSignal): void => {
+    wireInput(cover, signal);
+    cover.addEventListener(
+      'pagehide',
+      () => {
+        trap.fullscreenExited();
+      },
+      { signal },
+    );
+  };
+  wireInput(window, new AbortController().signal);
+  // Covers must not outlive the page.
+  window.addEventListener('pagehide', () => {
+    covers.close();
   });
   document.addEventListener('fullscreenchange', () => {
     if (!isFullscreen()) trap.fullscreenExited();
@@ -238,11 +302,6 @@ async function main(): Promise<void> {
   };
   window.addEventListener('pointerup', retrySound);
   window.addEventListener('keyup', retrySound);
-
-  // The black screen must not open a context menu or select anything.
-  document.addEventListener('contextmenu', (e) => {
-    if (document.body.dataset.view !== 'setup') e.preventDefault();
-  });
 
   show('setup');
   ui.input.focus();

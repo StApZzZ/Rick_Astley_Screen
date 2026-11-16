@@ -23,6 +23,18 @@ with your message. English summary [below](#english)._
 
 2. **OK** (или Enter) разворачивает страницу на весь экран, делает его чёрным, прячет
    курсор и не даёт монитору уснуть (Screen Wake Lock).
+
+   **Несколько мониторов.** В Chrome и Edge, если рабочий стол растянут на несколько
+   экранов, под полем появляется галочка «Затемнить и другие экраны». Браузер один раз
+   спросит разрешение «Управление окнами», после чего на каждом остальном экране
+   открывается чёрное окно. Движение мыши или клавиша в нём срабатывают так же, как на
+   главном. Клип играет на главном экране, остальные окна при этом закрываются. Одним
+   кликом Chrome разрешает открыть только одно такое окно; для третьего и следующих
+   экранов разрешите сайту всплывающие окна. Чёрные окна — обычные popup'ы, развёрнутые
+   на рабочую область экрана: панель задач и заголовок окна могут остаться видны, если
+   браузер не даёт сайту полноэкранный режим без жеста. В Firefox и Safari этого API нет,
+   там затемняется только текущий экран.
+
 3. Ловушка взводится, когда мышь и клавиатура пролежат в покое полторы секунды.
    Пока ты убираешь руку, ничего не сработает. Лёгкое дрожание мыши тоже не считается:
    нужно сдвинуть её хотя бы на 12 px за один раз.
@@ -143,7 +155,9 @@ typescript-eslint), Vite 8, Vitest 5, Playwright, ESLint 10, Angie 1.12 (minimal
 A static page (TypeScript, no runtime dependencies) served by Angie as an unprivileged user.
 Type a message (default: «Надо блокировать комп, лови Рикролл :pepe:», "you should have locked the PC, enjoy the Rickroll"; `:name:` is an emote whose image the deployment supplies via `RICKROLL_EMOTES`, falling back to text such as 🐸), press OK:
 the page goes fullscreen and black, keeps the display awake and arms itself once the
-mouse has been still for 1.5 s. The next mouse move, click, wheel, touch or key press
+mouse has been still for 1.5 s. On a multi-monitor desktop in Chrome/Edge a checkbox
+also covers the other screens with black popups (Window Management API, one permission
+prompt; a third screen and beyond need popups allowed for the site). The next mouse move, click, wheel, touch or key press
 plays the video with the message on top and a "lock your computer" hint.
 
 The clip is **not** included (copyright): `scripts/fetch-media.sh` downloads and
