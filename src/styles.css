@@ -115,6 +115,25 @@ button {
   filter: brightness(1.08);
 }
 
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.check input {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
 .status {
   min-height: 1.3em;
   margin: 12px 0 0;

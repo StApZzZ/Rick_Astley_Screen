@@ -238,3 +238,80 @@ test('an unknown token stays text and markup in a token never renders', async ({
   await expect(page.locator('#caption img')).toHaveCount(1);
   await expect(page.locator('#caption img.emote')).toHaveAttribute('src', /\/emotes\/pepe\.png$/);
 });
+
+function ignoreClosed(e: unknown): void {
+  if (!(e instanceof Error) || !e.message.includes('has been closed')) throw e;
+}
+
+/** Pretend to be Chromium on a two-monitor desktop with window management granted. */
+async function twoScreens(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const here = { availLeft: 0, availTop: 0, availWidth: 1280, availHeight: 720 };
+    const there = { availLeft: 1280, availTop: 0, availWidth: 1280, availHeight: 720 };
+    Object.defineProperty(Screen.prototype, 'isExtended', { get: () => true });
+    Object.assign(window, {
+      getScreenDetails: () => Promise.resolve({ screens: [here, there], currentScreen: here }),
+    });
+    const query = navigator.permissions.query.bind(navigator.permissions);
+    navigator.permissions.query = (d) =>
+      (d.name as string) === 'window-management'
+        ? Promise.resolve({ state: 'granted' } as PermissionStatus)
+        : query(d);
+  });
+}
+
+test('one screen: no multi-screen option', async ({ page }) => {
+  await stub(page);
+  await page.goto('./');
+  await expect(page.locator('#status')).toHaveText('Видео готово');
+  await expect(page.locator('#screens-row')).toBeHidden();
+});
+
+test.describe('several screens', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', 'Window Management is Chromium-only');
+
+  test('the other screen goes black too and its input triggers the clip', async ({ page }) => {
+    const errors = await watchErrors(page);
+    await twoScreens(page);
+    await stub(page);
+    await page.goto('./');
+    await expect(page.locator('#screens-row')).toBeVisible();
+    await expect(page.locator('#all-screens')).toBeChecked();
+    const coverOpened = page.waitForEvent('popup');
+    await arm(page);
+    const cover = await coverOpened;
+    expect(await cover.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(0, 0, 0)');
+    // The move triggers the clip, which closes the cover mid-gesture.
+    await cover.mouse.move(10, 10);
+    await cover.mouse.move(300, 200, { steps: 8 }).catch(ignoreClosed);
+    await expectPlaying(page, DEFAULT_TEXT);
+    await expect.poll(() => cover.isClosed()).toBe(true);
+    expect(errors).toEqual([]);
+  });
+
+  test('Esc on the other screen while arming backs out', async ({ page }) => {
+    await twoScreens(page);
+    await stub(page, { armDelayMs: 5000 });
+    await page.goto('./');
+    await expect(page.locator('#status')).toHaveText('Видео готово');
+    const coverOpened = page.waitForEvent('popup');
+    await page.locator('#go').click();
+    const cover = await coverOpened;
+    await cover.keyboard.press('Escape').catch(ignoreClosed); // keyup lands on a closed window
+    await expect(page.locator('#setup')).toBeVisible();
+    await expect.poll(() => cover.isClosed()).toBe(true);
+  });
+
+  test('unticked: no cover window', async ({ page }) => {
+    await twoScreens(page);
+    await stub(page);
+    await page.goto('./');
+    await page.locator('#all-screens').uncheck();
+    let popups = 0;
+    page.on('popup', () => popups++);
+    await arm(page);
+    await page.keyboard.press('KeyA');
+    await expect(page.locator('#stage')).toBeVisible();
+    expect(popups).toBe(0);
+  });
+});

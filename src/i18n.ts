@@ -16,6 +16,8 @@ export interface Strings {
   readonly lockHint: (shortcut: string) => string;
   readonly afterStop: (shortcut: string) => string;
   readonly insertEmote: (name: string) => string;
+  readonly allScreens: string;
+  readonly screensDenied: string;
 }
 
 const ru: Strings = {
@@ -41,6 +43,8 @@ const ru: Strings = {
   lockHint: (k) => `Уходя, блокируй компьютер: ${k}`,
   afterStop: (k) => `Готово. В следующий раз блокируй компьютер: ${k}`,
   insertEmote: (n) => `Вставить :${n}:`,
+  allScreens: 'Затемнить и другие экраны',
+  screensDenied: 'Нет доступа к экранам: разреши «Управление окнами» в настройках сайта',
 };
 
 const en: Strings = {
@@ -66,6 +70,8 @@ const en: Strings = {
   lockHint: (k) => `Lock your computer when you leave: ${k}`,
   afterStop: (k) => `Done. Next time, lock your computer: ${k}`,
   insertEmote: (n) => `Insert :${n}:`,
+  allScreens: 'Black out the other screens too',
+  screensDenied: 'No access to the screens: allow “Window management” in the site settings',
 };
 
 export function pickStrings(languages: readonly string[]): Strings {
